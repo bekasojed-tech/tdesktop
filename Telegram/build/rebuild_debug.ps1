@@ -17,25 +17,7 @@ $log = Join-Path $buildDirectory 'rebuild-debug.log'
 $lock = $null
 $exitCode = 1
 
-function Test-SamePath([string]$First, [string]$Second) {
-    return [IO.Path]::GetFullPath($First).TrimEnd('\', '/') -ieq `
-        [IO.Path]::GetFullPath($Second).TrimEnd('\', '/')
-}
-
-function Get-ClientProfile([string]$CommandLine) {
-    $match = [regex]::Match($CommandLine, '(?:^|\s)-workdir\s+(?:"([^"]+)"|(\S+))')
-    if (-not $match.Success) {
-        return $null
-    }
-    $value = $match.Groups[1].Value
-    if (-not $value) {
-        $value = $match.Groups[2].Value
-    }
-    if (-not [IO.Path]::IsPathRooted($value)) {
-        return $null
-    }
-    return $value
-}
+. (Join-Path $PSScriptRoot 'debug_client.ps1')
 
 try {
     $cacheFile = Join-Path $buildDirectory 'CMakeCache.txt'
@@ -76,19 +58,7 @@ try {
         [IO.FileMode]::OpenOrCreate,
         [IO.FileAccess]::ReadWrite,
         [IO.FileShare]::None)
-    $running = @(Get-CimInstance Win32_Process -Filter "Name = 'Telegram.exe'")
-    $clients = @()
-    foreach ($candidate in $running) {
-        $candidateProfile = Get-ClientProfile $candidate.CommandLine
-        if ($candidate.ExecutablePath -and (Test-SamePath $candidate.ExecutablePath $executable)) {
-            if (-not $candidateProfile -or -not (Test-SamePath $candidateProfile $profile)) {
-                throw "Checkout client PID $($candidate.ProcessId) uses another or unknown profile. Close it first."
-            }
-            $clients += Get-Process -Id $candidate.ProcessId
-        } elseif ($candidateProfile -and (Test-SamePath $candidateProfile $profile)) {
-            throw "Profile is used by a different executable (PID $($candidate.ProcessId)). Close it first."
-        }
-    }
+    $clients = @(Get-DebugClients $executable $profile)
     Write-Host "Checkout: $checkout"
     Write-Host "Client: $executable"
     Write-Host "Profile: $profile"
@@ -119,41 +89,43 @@ try {
         } finally {
             $setupProcess.Dispose()
         }
-        if ($clients.Count -gt 0) {
-            Write-Host 'Requesting graceful shutdown with -quit...'
-            $quit = Start-Process -FilePath $executable -ArgumentList @(
-                '-workdir', ('"{0}"' -f $profile), '-noupdate', '-quit'
-            ) -WorkingDirectory (Split-Path $executable) -WindowStyle Hidden -PassThru
-            try {
-                $deadline = [DateTime]::UtcNow.AddSeconds($StopTimeoutSeconds)
-                foreach ($process in @($clients) + @($quit)) {
-                    $remaining = [int][Math]::Max(0, ($deadline - [DateTime]::UtcNow).TotalMilliseconds)
-                    if (-not $process.WaitForExit($remaining)) {
-                        throw "Telegram did not exit within $StopTimeoutSeconds seconds. Close the checkout client/debugger, then retry."
-                    }
-                }
-            } finally {
-                $quit.Dispose()
-            }
+        $sessionFile = Join-Path $buildDirectory 'rebuild-debug-session.json'
+        $runId = [Guid]::NewGuid().ToString('N')
+        $session = @{
+            runId = $runId
+            ownerProcessId = $PID
+            stopTimeoutSeconds = $StopTimeoutSeconds
+            preLinkCompleted = $false
         }
-        $stillRunning = @(Get-CimInstance Win32_Process -Filter "Name = 'Telegram.exe'" | Where-Object {
-            $_.ExecutablePath -and (Test-SamePath $_.ExecutablePath $executable)
-        })
-        if ($stillRunning.Count -gt 0) {
-            throw 'A checkout client is still running; refusing to start the build.'
-        }
-        Write-Host "Building Debug. Log: $log"
-        $ErrorActionPreference = 'Continue'
+        [IO.File]::WriteAllText($sessionFile, ($session | ConvertTo-Json))
+        $previousRun = $env:TDESKTOP_REBUILD_DEBUG_RUN
+        Write-Host "Building Debug with the client running until PRE_LINK. Log: $log"
         try {
-            & $cmake --build $buildDirectory --config Debug --target Telegram --parallel $Jobs 2>&1 |
-                ForEach-Object { $_.ToString() } |
-                Tee-Object -FilePath $log
-            $buildExitCode = $LASTEXITCODE
+            $env:TDESKTOP_REBUILD_DEBUG_RUN = $runId
+            $ErrorActionPreference = 'Continue'
+            try {
+                & $cmake --build $buildDirectory --config Debug --target Telegram --parallel $Jobs 2>&1 |
+                    ForEach-Object { $_.ToString() } |
+                    Tee-Object -FilePath $log
+                $buildExitCode = $LASTEXITCODE
+            } finally {
+                $ErrorActionPreference = 'Stop'
+            }
+            $session = [IO.File]::ReadAllText($sessionFile) | ConvertFrom-Json
         } finally {
-            $ErrorActionPreference = 'Stop'
+            $env:TDESKTOP_REBUILD_DEBUG_RUN = $previousRun
+            Remove-Item -LiteralPath $sessionFile -ErrorAction SilentlyContinue
         }
         if ($buildExitCode -ne 0) {
-            throw "Debug build failed (exit $buildExitCode). Client was not restarted. See $log"
+            throw "Debug build failed (exit $buildExitCode). No restart attempted. See $log"
+        }
+        $clients = @(Get-DebugClients $executable $profile)
+        if ($clients.Count -gt 0) {
+            if ($session.preLinkCompleted) {
+                throw 'A client was started during linking; close it and retry.'
+            }
+            Write-Host "No relink was needed; existing Telegram left running (PID $($clients[0].Id))."
+            exit 0
         }
         if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
             throw "Build completed but executable is missing: $executable"

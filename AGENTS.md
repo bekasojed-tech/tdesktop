@@ -295,11 +295,15 @@ procedure; report what it printed.
 
 For this fork's native Windows checkout, the user has given standing permission
 to run `rebuild-debug.cmd` when a change needs a build and restart. It initializes
-the configured Visual Studio environment, gracefully quits only this checkout's
-`out/Debug/Telegram.exe` using `out/local-profile`, builds Debug, and launches the
-rebuilt client with the same profile and `-noupdate` only after success. No new
-confirmation is needed for this helper. Use `rebuild-debug.cmd -CheckOnly` for
-preflight and read `docs/rebuild-debug.md` for its limits and log location.
+the configured Visual Studio environment and compiles Debug while the client
+keeps running. Only the helper's opted-in `PRE_LINK` hook gracefully quits this
+checkout's `out/Debug/Telegram.exe` using `out/local-profile`, immediately before
+linking. After the entire build succeeds it launches the rebuilt client with
+the same profile and `-noupdate`. Compilation errors leave the client running.
+MSBuild may run `PRE_LINK` even when sources are unchanged, so a no-change build
+can also restart the client. If the hook never runs, keep the existing client.
+No new confirmation is needed for this helper. Use `rebuild-debug.cmd -CheckOnly`
+for preflight and read `docs/rebuild-debug.md` for its limits and log location.
 This permission does not cover forced termination, installed clients, other
 checkouts or profiles, debuggers, or deleting locked outputs. If graceful exit
 or the build fails, report the helper's error and stop; do not widen its scope.
