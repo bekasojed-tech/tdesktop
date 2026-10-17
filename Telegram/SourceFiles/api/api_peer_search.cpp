@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_single_message_search.h"
 #include "apiwrap.h"
+#include "core/fork_policy.h"
 #include "data/data_session.h"
 #include "dialogs/ui/chat_search_in.h" // IsHashOrCashtagSearchQuery
 #include "main/main_session.h"
@@ -53,7 +54,7 @@ void PeerSearch::request(
 	}
 	cache.requested = true;
 	cache.result.query = _query;
-	if (_query.size() < kMinSponsoredQueryLength) {
+	if (Fork::kDisableAds || _query.size() < kMinSponsoredQueryLength) {
 		cache.sponsoredReady = true;
 	} else if (_type == Type::WithSponsored) {
 		requestSponsored();

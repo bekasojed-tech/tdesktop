@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_peer_search.h" // SponsoredSearchResult
 #include "apiwrap.h"
 #include "core/click_handler_types.h"
+#include "core/fork_policy.h"
 #include "data/data_channel.h"
 #include "data/data_document.h"
 #include "data/data_file_origin.h"
@@ -302,6 +303,9 @@ HistoryItem *SponsoredMessages::injectItem(
 }
 
 bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
+	if (Fork::kDisableAds) {
+		return false;
+	}
 	if (history->peer->isChannel()) {
 		return true;
 	} else if (const auto user = history->peer->asUser()) {
@@ -311,7 +315,8 @@ bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
 }
 
 bool SponsoredMessages::canHaveFor(not_null<HistoryItem*> item) const {
-	return item->history()->peer->isBroadcast()
+	return !Fork::kDisableAds
+		&& item->history()->peer->isBroadcast()
 		&& item->isRegular();
 }
 

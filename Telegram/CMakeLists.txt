@@ -25,6 +25,7 @@ get_filename_component(src_loc SourceFiles REALPATH)
 get_filename_component(res_loc Resources REALPATH)
 
 include(cmake/telegram_options.cmake)
+include(cmake/fork_options.cmake)
 include(cmake/lib_ffmpeg.cmake)
 include(cmake/lib_stripe.cmake)
 include(cmake/lib_tgcalls.cmake)
@@ -595,6 +596,7 @@ PRIVATE
     core/external_control.h
     core/file_utilities.cpp
     core/file_utilities.h
+    core/fork_policy.h
     core/launcher.cpp
     core/launcher.h
     core/local_url_handlers.cpp

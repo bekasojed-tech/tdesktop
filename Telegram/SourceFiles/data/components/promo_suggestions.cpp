@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/unixtime.h"
 #include "core/application.h"
 #include "core/core_settings.h"
+#include "core/fork_policy.h"
 #include "data/data_changes.h"
 #include "data/data_histories.h"
 #include "data/data_session.h"
@@ -131,7 +132,10 @@ void PromoSuggestions::refreshTopPromotion() {
 					|= _dismissedSuggestions.emplace(qs(suggestion)).second;
 			}
 
-			if (const auto peer = data.vpeer()) {
+			const auto peer = (Fork::kDisableAds && data.is_proxy())
+				? nullptr
+				: data.vpeer();
+			if (peer) {
 				const auto peerId = peerFromMTP(*peer);
 				const auto history = _session->data().history(peerId);
 				setTopPromoted(
