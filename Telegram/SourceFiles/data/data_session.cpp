@@ -2316,6 +2316,14 @@ rpl::producer<ReactionsRemoved> Session::reactionsRemoved() const {
 	return _reactionsRemoved.events();
 }
 
+void Session::requestPeerTextRefresh(not_null<PeerData*> peer) {
+	if (const auto messages = messagesList(peer->id)) {
+		for (const auto &[id, item] : *messages) {
+			requestItemTextRefresh(item);
+		}
+	}
+}
+
 void Session::requestItemTextRefresh(not_null<HistoryItem*> item) {
 	const auto call = [&](not_null<HistoryItem*> item) {
 		enumerateItemViews(item, [&](not_null<ViewElement*> view) {

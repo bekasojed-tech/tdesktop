@@ -48,6 +48,10 @@ if (DESKTOP_APP_TEST_APPS)
     include(cmake/tests.cmake)
 endif()
 
+if (DESKTOP_APP_TEST_APPS OR TDESKTOP_BUILD_POWER_SCHEDULE_TESTS)
+    include(cmake/test_power_schedule.cmake)
+endif()
+
 if (WIN32)
     include(cmake/generate_midl.cmake)
     generate_midl(Telegram ${src_loc}
@@ -315,6 +319,8 @@ PRIVATE
     boxes/add_contact_box.h
     boxes/auto_lock_box.cpp
     boxes/auto_lock_box.h
+    boxes/power_schedule_box.cpp
+    boxes/power_schedule_box.h
     boxes/auto_download_box.cpp
     boxes/auto_download_box.h
     boxes/background_box.cpp
@@ -1191,6 +1197,10 @@ PRIVATE
     history/view/history_view_summary_header.h
     history/view/history_view_text_helper.cpp
     history/view/history_view_text_helper.h
+    history/view/history_view_power_schedule.cpp
+    history/view/history_view_power_schedule.h
+    history/view/history_view_power_schedule_parse.cpp
+    history/view/history_view_power_schedule_parse.h
     history/view/history_view_transcribe_button.cpp
     history/view/history_view_transcribe_button.h
     history/view/history_view_translate_bar.cpp

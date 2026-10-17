@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_reply_button.h"
 #include "history/view/reactions/history_view_reactions.h"
 #include "history/view/history_view_cursor_state.h"
+#include "history/view/history_view_power_schedule.h"
 #include "history/view/history_view_reply.h"
 #include "history/view/history_view_text_helper.h"
 #include "history/history.h"
@@ -2263,6 +2264,8 @@ void Element::validateText() {
 		const auto unavailable = item->computeUnavailableReason();
 		if (!unavailable.isEmpty()) {
 			setTextWithLinks(tr::italic(unavailable));
+		} else if (const auto filtered = PowerScheduleText(_textItem)) {
+			setTextWithLinks(*filtered);
 		} else {
 			setTextWithLinks(_textItem->translatedTextWithLocalEntities());
 			richPage = _textItem->translatedRichPage();

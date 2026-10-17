@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/reactions/history_view_reactions_button.h"
 #include "history/view/history_view_reply_button.h"
 #include "history/view/history_view_group_call_bar.h" // UserpicInRow.
+#include "history/view/history_view_power_schedule.h"
 #include "history/view/history_view_reply.h"
 #include "history/view/history_view_transcribe_button.h"
 #include "history/view/history_view_summary_header.h"
@@ -5071,7 +5072,8 @@ SelectedQuote Message::selectedQuote(TextSelection selection) const {
 	const auto item = textItem ? textItem : data().get();
 	const auto &translated = item->translatedText();
 	const auto &original = item->originalText();
-	if (&translated != &original
+	if (PowerScheduleText(item)
+		|| &translated != &original
 		|| selection.empty()
 		|| selection == FullSelection) {
 		return {};
@@ -5109,7 +5111,7 @@ TextSelection Message::selectionFromQuote(
 	const auto item = quote.item;
 	const auto &translated = item->translatedText();
 	const auto &original = item->originalText();
-	if (&translated != &original) {
+	if (PowerScheduleText(item) || &translated != &original) {
 		return {};
 	} else if (hasVisibleText()) {
 		const auto media = this->media();

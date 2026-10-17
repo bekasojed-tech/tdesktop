@@ -25,6 +25,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_unique_gift.h"
 #include "history/view/history_view_cursor_state.h"
 #include "history/view/history_view_message.h"
+#include "history/view/history_view_power_schedule.h"
+#include "history/view/history_view_power_schedule_parse.h"
 #include "history/view/history_view_reply.h"
 #include "history/view/history_view_sponsored_click_handler.h"
 #include "history/history.h"
@@ -1773,9 +1775,18 @@ void WebPage::playAnimation(bool autoplay) {
 }
 
 bool WebPage::isDisplayed() const {
-	return !_data->pendingTill
-		&& !_data->failed
-		&& !_parent->data()->Has<HistoryMessageLogEntryOriginal>();
+	const auto item = _parent->data();
+	if (_data->pendingTill
+		|| _data->failed
+		|| item->Has<HistoryMessageLogEntryOriginal>()) {
+		return false;
+	}
+	return !item->isPost()
+		|| item->richPage()
+		|| ParsePowerSchedule(
+			item->originalText().text,
+			PowerScheduleGroup(item->history()->peer)).status
+				!= PowerScheduleStatus::Filtered;
 }
 
 QString WebPage::additionalInfoString() const {

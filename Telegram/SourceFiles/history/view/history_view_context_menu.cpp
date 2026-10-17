@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_list_widget.h"
 #include "history/view/controls/history_view_suggest_options.h"
 #include "history/view/history_view_cursor_state.h"
+#include "history/view/history_view_power_schedule.h"
 #include "history/view/history_view_reaction_preview.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -68,7 +69,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "menu/menu_send.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/boxes/show_or_premium_box.h"
+#include "ui/layers/generic_box.h"
 #include "ui/widgets/fields/input_field.h"
+#include "ui/widgets/labels.h"
 #include "ui/power_saving.h"
 #include "boxes/delete_messages_box.h"
 #include "boxes/moderate_messages_box.h"
@@ -1776,6 +1779,22 @@ void FillContextMenuItems(
 		&& Api::WhoReactedExists(item, Api::WhoReactedList::All);
 
 	AddReplyToMessageAction(result, request, list);
+	const auto textItem = view ? view->textItem() : nullptr;
+	if (textItem && PowerScheduleText(textItem)) {
+		const auto original = textItem->originalText();
+		const auto selectable = !list->hasCopyRestriction(textItem);
+		result->addAction(tr::lng_translate_show_original(tr::now), [=] {
+			list->controller()->show(Box([=](not_null<Ui::GenericBox*> box) {
+				box->setTitle(tr::lng_translate_show_original());
+				const auto label = box->addRow(object_ptr<Ui::FlatLabel>(
+					box,
+					st::boxLabel));
+				label->setMarkedText(original);
+				label->setSelectable(selectable);
+				box->addButton(tr::lng_close(), [=] { box->closeBox(); });
+			}));
+		}, &st::menuIconShowInChat);
+	}
 	if (item) {
 		const auto media = item->media();
 		const auto document = media ? media->document() : nullptr;
