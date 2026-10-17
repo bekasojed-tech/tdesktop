@@ -293,6 +293,17 @@ procedure; report what it printed.
 
 ### Build output locks
 
+For this fork's native Windows checkout, the user has given standing permission
+to run `rebuild-debug.cmd` when a change needs a build and restart. It initializes
+the configured Visual Studio environment, gracefully quits only this checkout's
+`out/Debug/Telegram.exe` using `out/local-profile`, builds Debug, and launches the
+rebuilt client with the same profile and `-noupdate` only after success. No new
+confirmation is needed for this helper. Use `rebuild-debug.cmd -CheckOnly` for
+preflight and read `docs/rebuild-debug.md` for its limits and log location.
+This permission does not cover forced termination, installed clients, other
+checkouts or profiles, debuggers, or deleting locked outputs. If graceful exit
+or the build fails, report the helper's error and stop; do not widen its scope.
+
 For builds owned by the autonomous `continue` / `perform-task` workflow, read
 and follow `.agents/shared/build-lock-recovery.md`. PDB, EXE, OBJ, and other
 build-output lock errors are recoverable: stop only the exact checkout
