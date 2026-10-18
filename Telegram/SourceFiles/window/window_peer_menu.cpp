@@ -40,7 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/create_poll_box.h"
 #include "boxes/edit_todo_list_box.h"
 #include "boxes/pin_messages_box.h"
-#include "boxes/power_schedule_box.h"
+#include "boxes/channel_filters_box.h"
 #include "boxes/premium_limits_box.h"
 #include "boxes/report_messages_box.h"
 #include "boxes/filters/edit_filter_chats_list.h"
@@ -332,7 +332,7 @@ private:
 	void addToggleTopicClosed();
 	void addExportChat();
 	void addTranslate();
-	void addPowerSchedule();
+	void addChannelFilters();
 	void addReport();
 	void addNewContact();
 	void addShareContact();
@@ -1082,14 +1082,14 @@ void Filler::addExportChat() {
 		&st::menuIconExport);
 }
 
-void Filler::addPowerSchedule() {
+void Filler::addChannelFilters() {
 	if (!_peer->isBroadcast()) {
 		return;
 	}
 	const auto peer = _peer;
 	const auto controller = _controller;
-	_addAction(tr::lng_power_schedule_title(tr::now), [=] {
-		controller->show(Box(PowerScheduleBox, peer));
+	_addAction(tr::lng_channel_filters_title(tr::now), [=] {
+		controller->show(Box(ChannelFiltersBox, peer));
 	}, &st::menuIconSettings);
 }
 
@@ -1949,7 +1949,7 @@ void Filler::fillContextMenuActions() {
 
 void Filler::fillHistoryActions() {
 	addToggleMuteSubmenu(true);
-	addPowerSchedule();
+	addChannelFilters();
 	addCreateTopic();
 	addInfo();
 	addViewAsTopics();
@@ -1973,7 +1973,7 @@ void Filler::fillHistoryActions() {
 
 void Filler::fillProfileActions() {
 	addTTLSubmenu(true);
-	addPowerSchedule();
+	addChannelFilters();
 	addSupportInfo();
 	addNewContact();
 	addShareContact();

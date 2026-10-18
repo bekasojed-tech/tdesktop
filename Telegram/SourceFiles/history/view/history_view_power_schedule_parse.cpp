@@ -60,9 +60,38 @@ bool IsPowerScheduleGroup(const QString &group) {
 	return expression.match(group).hasMatch();
 }
 
+QString DefaultPowerScheduleFormat() {
+	return u"Графік відключень ДТЕК на %day%, %date%. "
+		"Група %group%: %time%."_q;
+}
+
+bool IsPowerScheduleFormat(const QString &format) {
+	if (format.isEmpty()
+		|| format.size() > 500
+		|| format.contains('\n')
+		|| format.contains('\r')
+		|| format.contains(QChar::LineSeparator)
+		|| format.contains(QChar::ParagraphSeparator)
+		|| !format.contains(u"%time%"_q)) {
+		return false;
+	}
+	auto remaining = format;
+	static const auto fields = std::array{
+		u"%day%"_q,
+		u"%date%"_q,
+		u"%group%"_q,
+		u"%time%"_q,
+	};
+	for (const auto &field : fields) {
+		remaining.remove(field);
+	}
+	return !remaining.contains('%');
+}
+
 PowerScheduleResult ParsePowerSchedule(
 		const QString &text,
-		const QString &group) {
+		const QString &group,
+		const QString &format) {
 	if (!IsPowerScheduleGroup(group)) {
 		return {};
 	}
@@ -135,14 +164,14 @@ PowerScheduleResult ParsePowerSchedule(
 		u"суботу"_q,
 		u"неділю"_q,
 	};
-	return {
-		PowerScheduleStatus::Filtered,
-		u"Графік відключень ДТЕК на %1, %2. Група %3: %4."_q.arg(
-			weekdays[scheduleDate.dayOfWeek() - 1],
-			dateMatch.captured(),
-			group,
-			selected),
-	};
+	auto compact = IsPowerScheduleFormat(format)
+		? format
+		: DefaultPowerScheduleFormat();
+	compact.replace(u"%day%"_q, weekdays[scheduleDate.dayOfWeek() - 1])
+		.replace(u"%date%"_q, dateMatch.captured())
+		.replace(u"%group%"_q, group)
+		.replace(u"%time%"_q, selected);
+	return { PowerScheduleStatus::Filtered, compact };
 }
 
 TextWithEntities ApplyPowerSchedule(

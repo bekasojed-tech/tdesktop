@@ -6,6 +6,6 @@ namespace Ui {
 class GenericBox;
 } // namespace Ui
 
-void PowerScheduleBox(
+void ChannelFiltersBox(
 	not_null<Ui::GenericBox*> box,
 	not_null<PeerData*> peer);

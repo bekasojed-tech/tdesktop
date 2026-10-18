@@ -162,6 +162,29 @@ int main(int argc, char *argv[]) {
 		Check(Apply({ post }, group).text == expected,
 			"uses the Ukrainian weekday matching the schedule date");
 	}
+	Check(IsPowerScheduleFormat(DefaultPowerScheduleFormat()),
+		"the default template is valid");
+	Check(IsPowerScheduleFormat(u"%group%: %time%"_q),
+		"a user can omit optional template fields");
+	Check(!IsPowerScheduleFormat(u"%date%"_q),
+		"a template must include the actual outage times");
+	Check(!IsPowerScheduleFormat(u"%time% %unknown%"_q),
+		"unknown fields are rejected");
+	Check(!IsPowerScheduleFormat(u"%time%\n%date%"_q),
+		"multiline templates are rejected");
+	Check(!IsPowerScheduleFormat(QString(501, QChar('x')) + u"%time%"_q),
+		"oversized templates are rejected");
+	Check(ParsePowerSchedule(source, group, u"%date% / %group%: %time%"_q).compact
+		== u"18.10.2026 / 12.1: 07:00-10:30, 22:00–24:00"_q,
+		"uses the saved custom template");
+	Check(ParsePowerSchedule(source, group, u"%time% %time%"_q).compact
+		== u"07:00-10:30, 22:00–24:00 07:00-10:30, 22:00–24:00"_q,
+		"repeated fields are filled consistently");
+	Check(ParsePowerSchedule(source, group, u"invalid"_q).compact == compact,
+		"invalid stored templates fall back to the default");
+	Check(ParsePowerSchedule(header + first, group, u"%time%"_q).status
+		== PowerScheduleStatus::MissingGroup,
+		"a custom template never turns a missing group into an outage schedule");
 	Check(marked.text == source && marked.entities.size() == 3,
 		"filtering does not mutate the source message");
 

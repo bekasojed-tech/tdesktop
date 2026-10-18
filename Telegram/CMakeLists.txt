@@ -52,6 +52,10 @@ if (DESKTOP_APP_TEST_APPS OR TDESKTOP_BUILD_POWER_SCHEDULE_TESTS)
     include(cmake/test_power_schedule.cmake)
 endif()
 
+if (DESKTOP_APP_TEST_APPS OR TDESKTOP_BUILD_CHANNEL_FILTER_TESTS)
+    include(cmake/test_channel_filter.cmake)
+endif()
+
 if (WIN32)
     include(cmake/generate_midl.cmake)
     generate_midl(Telegram ${src_loc}
@@ -319,8 +323,8 @@ PRIVATE
     boxes/add_contact_box.h
     boxes/auto_lock_box.cpp
     boxes/auto_lock_box.h
-    boxes/power_schedule_box.cpp
-    boxes/power_schedule_box.h
+    boxes/channel_filters_box.cpp
+    boxes/channel_filters_box.h
     boxes/auto_download_box.cpp
     boxes/auto_download_box.h
     boxes/background_box.cpp
@@ -1227,6 +1231,10 @@ PRIVATE
     history/history_item_edition.h
     history/history_item_helpers.cpp
     history/history_item_helpers.h
+    history/history_channel_filter.cpp
+    history/history_channel_filter.h
+    history/history_item_filter.cpp
+    history/history_item_filter.h
     history/history_item_reply_markup.cpp
     history/history_item_reply_markup.h
     history/history_item_text.cpp

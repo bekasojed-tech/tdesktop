@@ -17,8 +17,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/history_item_filter.h"
 #include "history/history_item_helpers.h"
 #include "data/data_session.h"
+#include "data/data_changes.h"
 #include "data/data_chat.h"
 #include "data/data_channel.h"
 #include "data/data_forum_topic.h"
@@ -54,6 +56,13 @@ Provider::Provider(not_null<AbstractController*> controller)
 	_controller->session().data().itemRemoved(
 	) | rpl::on_next([this](auto item) {
 		itemRemoved(item);
+	}, _lifetime);
+	_controller->session().changes().messageUpdates(
+		Data::MessageUpdate::Flag::ReplyMarkup
+	) | rpl::filter([=](const Data::MessageUpdate &update) {
+		return update.item->history()->peer == _peer;
+	}) | rpl::on_next([=] {
+		_refreshed.fire({});
 	}, _lifetime);
 
 	style::PaletteChanged(
@@ -471,6 +480,11 @@ FullMsgId Provider::computeFullId(
 BaseLayout *Provider::getLayout(
 		UniversalMsgId universalId,
 		not_null<Overview::Layout::Delegate*> delegate) {
+	const auto item = _controller->session().data().message(
+		computeFullId(universalId));
+	if (item && HistoryFilter::IsHidden(item)) {
+		return nullptr;
+	}
 	auto it = _layouts.find(universalId);
 	if (it == _layouts.end()) {
 		if (auto layout = createLayout(universalId, delegate, _type)) {

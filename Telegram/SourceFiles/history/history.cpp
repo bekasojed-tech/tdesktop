@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_inner_widget.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
+#include "history/history_item_filter.h"
 #include "history/history_item_helpers.h"
 #include "history/history_streamed_drafts.h"
 #include "history/history_translation.h"
@@ -257,11 +258,32 @@ void History::itemRemoved(not_null<HistoryItem*> item) {
 }
 
 void History::checkChatListMessageRemoved(not_null<HistoryItem*> item) {
-	if (chatListMessage() != item) {
+	if (chatListMessage() != item
+		&& (lastMessage() != item
+			|| !HistoryFilter::Options(peer).hideButtonPosts)) {
 		return;
 	}
 	setChatListMessageUnknown();
 	refreshChatListMessage();
+}
+
+void History::refreshLocalFilters() {
+	for (const auto &item : _items) {
+		owner().requestItemTextRefresh(item.get());
+		owner().requestItemViewRefresh(item.get());
+		item->invalidateChatListEntry();
+		session().changes().messageUpdated(
+			item.get(),
+			Data::MessageUpdate::Flag::ReplyMarkup);
+		if (HistoryFilter::IsHidden(item.get())) {
+			if (const auto thread = item->maybeNotificationThread()) {
+				thread->removeNotification(item.get());
+			}
+			Core::App().notifications().clearFromItem(item.get());
+		}
+	}
+	refreshChatListMessage();
+	owner().notifyHistoryChangeDelayed(this);
 }
 
 void History::itemVanished(not_null<HistoryItem*> item) {
@@ -3181,6 +3203,27 @@ void History::refreshChatListMessage() {
 }
 
 void History::setChatListMessage(HistoryItem *item) {
+	if (item && HistoryFilter::IsHidden(item)) {
+		const auto before = item->id;
+		item = nullptr;
+		const auto current = _chatListMessage.value_or(nullptr);
+		if (current
+			&& current->id < before
+			&& !HistoryFilter::IsHidden(current)) {
+			item = current;
+		}
+		for (const auto &block : blocks) {
+			for (const auto &view : block->messages) {
+				const auto candidate = view->data().get();
+				if (candidate->id < before
+					&& (!item || candidate->id > item->id)
+					&& !candidate->isEmpty()
+					&& !HistoryFilter::IsHidden(candidate)) {
+					item = candidate;
+				}
+			}
+		}
+	}
 	if (_chatListMessage && *_chatListMessage == item) {
 		return;
 	}
@@ -3582,7 +3625,9 @@ void History::dialogEntryApplied() {
 		requestChatListMessage();
 		return;
 	}
-	if (!chatListMessage()) {
+	const auto hasFilteredLastMessage = lastMessage()
+		&& HistoryFilter::IsHidden(lastMessage());
+	if (!chatListMessage() && !hasFilteredLastMessage) {
 		clear(ClearType::Unload, true);
 		addNewerSlice(QVector<MTPMessage>());
 		addOlderSlice(QVector<MTPMessage>());

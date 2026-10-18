@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/update_checker.h"
 #include "history/view/history_view_cursor_state.h"
 #include "history/history_item_components.h"
+#include "history/history_item_filter.h"
 #include "history/history_item_helpers.h"
 #include "history/view/media/history_view_media_generic.h"
 #include "history/view/media/history_view_web_page.h"
@@ -1745,6 +1746,9 @@ void Message::refreshTopicButton() {
 }
 
 int Message::marginTop() const {
+	if (HistoryFilter::IsHidden(data())) {
+		return 0;
+	}
 	auto result = 0;
 	if (!isHidden()) {
 		if (isAttachedToPrevious()) {
@@ -1788,6 +1792,9 @@ int Message::marginBottom() const {
 }
 
 void Message::draw(Painter &p, const PaintContext &context) const {
+	if (HistoryFilter::IsHidden(data())) {
+		return;
+	}
 	auto g = countGeometry();
 	if (g.width() < 1) {
 		return;

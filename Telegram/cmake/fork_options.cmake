@@ -1,5 +1,6 @@
 option(TDESKTOP_FORK_DISABLE_ADS "Disable advertisements in the bekasojed-tech fork." ON)
 option(TDESKTOP_BUILD_POWER_SCHEDULE_TESTS "Build the local power schedule filter test." OFF)
+option(TDESKTOP_BUILD_CHANNEL_FILTER_TESTS "Build the local channel post filter test." OFF)
 
 target_compile_definitions(Telegram PRIVATE
     TDESKTOP_FORK_DISABLE_ADS=$<BOOL:${TDESKTOP_FORK_DISABLE_ADS}>

@@ -32,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_text_helper.h"
 #include "history/history.h"
 #include "history/history_item_components.h"
+#include "history/history_item_filter.h"
 #include "history/history_item_helpers.h"
 #include "data/data_channel.h"
 #include "data/data_session.h"
@@ -1636,7 +1637,7 @@ bool Element::isHiddenByGroup() const {
 }
 
 bool Element::isHidden() const {
-	return isHiddenByGroup();
+	return isHiddenByGroup() || HistoryFilter::IsHidden(data());
 }
 
 void Element::overrideMedia(std::unique_ptr<Media> media) {

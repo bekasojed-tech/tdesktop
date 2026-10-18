@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_subsection_tabs.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/history_item_filter.h"
 #include "core/application.h"
 #include "core/click_handler_types.h"
 #include "core/shortcuts.h"
@@ -526,6 +527,9 @@ InnerWidget::InnerWidget(
 	session().changes().messageUpdates(
 		Data::MessageUpdate::Flag::DialogRowRefresh
 	) | rpl::on_next([=](const Data::MessageUpdate &update) {
+		if (HistoryFilter::IsHidden(update.item)) {
+			itemRemoved(update.item);
+		}
 		refreshDialogRow({ update.item->history(), update.item->fullId() });
 	}, lifetime());
 
@@ -4768,6 +4772,7 @@ void InnerWidget::searchReceived(
 		? _searchState.inChat
 		: Key(_openedForum->history());
 	if (inject
+		&& !HistoryFilter::IsHidden(inject)
 		&& (globalSearch
 			|| !_searchState.inChat
 			|| inject->history() == _searchState.inChat.history())) {
@@ -4784,6 +4789,9 @@ void InnerWidget::searchReceived(
 	}
 	auto &results = toPreview ? _previewResults : _searchResults;
 	for (const auto &item : messages) {
+		if (HistoryFilter::IsHidden(item)) {
+			continue;
+		}
 		const auto history = item->history();
 		if (toPreview || !uniquePeers || !hasHistoryInResults(history)) {
 			const auto index = int(results.size());

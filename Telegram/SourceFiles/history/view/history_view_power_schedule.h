@@ -10,7 +10,6 @@ class PeerData;
 namespace HistoryView {
 
 [[nodiscard]] QString PowerScheduleGroup(not_null<PeerData*> peer);
-void SetPowerScheduleGroup(not_null<PeerData*> peer, const QString &group);
 [[nodiscard]] std::optional<TextWithEntities> PowerScheduleText(
 	not_null<HistoryItem*> item);
 

@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_service_message.h"
 #include "history/view/media/history_view_media_grouped.h"
 #include "history/history_item_components.h"
+#include "history/history_item_filter.h"
 #include "history/history_item_helpers.h"
 #include "history/history_unread_things.h"
 #include "history/history.h"
@@ -1269,14 +1270,19 @@ bool HistoryItem::notificationReady() const {
 }
 
 void HistoryItem::finishEdition(int oldKeyboardTop) {
+	const auto refresh = [&](not_null<HistoryItem*> item) {
+		_history->owner().requestItemViewRefresh(item);
+		item->invalidateChatListEntry();
+		if (HistoryFilter::IsHidden(item)) {
+			Core::App().notifications().clearFromItem(item);
+		}
+	};
 	if (const auto group = _history->owner().groups().find(this)) {
 		for (const auto &item : group->items) {
-			_history->owner().requestItemViewRefresh(item);
-			item->invalidateChatListEntry();
+			refresh(item);
 		}
 	} else {
-		_history->owner().requestItemViewRefresh(this);
-		invalidateChatListEntry();
+		refresh(this);
 	}
 
 	// Should be completely redesigned as the oldTop no longer exists.
@@ -1691,6 +1697,9 @@ std::unique_ptr<HistoryView::Element> HistoryItem::createView(
 }
 
 void HistoryItem::invalidateChatListEntry() {
+	if (HistoryFilter::IsHidden(this)) {
+		_history->checkChatListMessageRemoved(this);
+	}
 	_history->session().changes().messageUpdated(
 		this,
 		Data::MessageUpdate::Flag::DialogRowRefresh);
@@ -2396,6 +2405,7 @@ void HistoryItem::clearMainView() {
 
 void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	history()->session().ephemeralMessages().revertAnchored(this);
+	const auto wasHidden = HistoryFilter::IsHidden(this);
 
 	int keyboardTop = -1;
 	//if (!pendingResize()) {// #TODO edit bot message
@@ -2557,6 +2567,13 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	}
 
 	finishEdition(keyboardTop);
+	if (wasHidden != HistoryFilter::IsHidden(this)) {
+		const auto preview = _history->chatListMessage();
+		const auto last = _history->lastMessage();
+		if (const auto invalidated = preview ? preview : last) {
+			_history->checkChatListMessageRemoved(invalidated);
+		}
+	}
 }
 
 void HistoryItem::applyChanges(not_null<Data::Story*> story) {

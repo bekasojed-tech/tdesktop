@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/mtproto_config.h"
 #include "history/history.h"
 #include "history/history_item_components.h"
+#include "history/history_item_filter.h"
 #include "history/history_item_helpers.h"
 #include "history/view/history_view_chat_section.h"
 #include "lang/lang_keys.h"
@@ -317,6 +318,7 @@ System::SkipState System::skipNotification(
 	const auto thread = item->maybeNotificationThread();
 	if (!thread
 		|| !thread->currentNotification()
+		|| HistoryFilter::IsHidden(item)
 		|| (messageType && item->skipNotification())
 		|| (type == Data::ItemNotificationType::Reaction
 			&& skipSentNotification(item, _sentReactionNotifications))
@@ -457,7 +459,10 @@ void System::schedule(Data::ItemNotification notification) {
 		: notification.reactionOrVoteSender;
 	if (!skip.silent) {
 		registerThread(thread);
-		_whenAlerts[thread].emplace(timing.when, notifyBy);
+		_whenAlerts[thread].emplace(timing.when, Alert{
+			.from = notifyBy,
+			.itemId = item->fullId(),
+		});
 	}
 	if (const auto user = item->history()->peer->asUser()) {
 		if (user->hasStarsPerMessage()
@@ -687,11 +692,13 @@ void System::showGrouped() {
 	if (const auto session = findSession(_lastHistorySessionId)) {
 		if (const auto lastItem = session->data().message(_lastHistoryItemId)) {
 			_waitForAllGroupedTimer.cancel();
-			_manager->showNotification({
-				.item = lastItem,
-				.forwardedCount = _lastForwardedCount,
-				.soundId = _lastSoundId,
-			});
+			if (!HistoryFilter::IsHidden(lastItem)) {
+				_manager->showNotification({
+					.item = lastItem,
+					.forwardedCount = _lastForwardedCount,
+					.soundId = _lastSoundId,
+				});
+			}
 			_lastForwardedCount = 0;
 			_lastHistoryItemId = FullMsgId();
 			_lastHistorySessionId = 0;
@@ -728,8 +735,13 @@ void System::showNext() {
 	for (auto i = _whenAlerts.begin(); i != _whenAlerts.end();) {
 		while (!i->second.empty() && i->second.begin()->first <= ms) {
 			const auto thread = i->first;
-			const auto from = i->second.begin()->second;
-			if (const auto soundId = MaybeSoundFor(thread, from)) {
+			const auto &alert = i->second.begin()->second;
+			const auto item = thread->owner().message(alert.itemId);
+			if (!item || HistoryFilter::IsHidden(item)) {
+				i->second.erase(i->second.begin());
+				continue;
+			}
+			if (const auto soundId = MaybeSoundFor(thread, alert.from)) {
 				alertThread = thread;
 				alertSoundId = soundId;
 			}
@@ -841,6 +853,10 @@ void System::showNext() {
 			break;
 		}
 		const auto notifyItem = notify->item;
+		if (HistoryFilter::IsHidden(notifyItem)) {
+			notifyItem->notificationThread()->popNotification(*notify);
+			continue;
+		}
 		const auto notifySilent = computeSkipState(*notify).silent;
 		const auto messageType = (notify->type
 			== Data::ItemNotificationType::Message);
@@ -874,7 +890,9 @@ void System::showNext() {
 				do {
 					const auto k = j->second.find(
 						thread->currentNotification());
-					if (k != j->second.cend()) {
+					if (k != j->second.cend()
+						&& !HistoryFilter::IsHidden(
+							thread->currentNotification()->item)) {
 						nextNotify = thread->currentNotification();
 						_waiters.emplace(notifyThread, Waiter{
 							.key = k->first,

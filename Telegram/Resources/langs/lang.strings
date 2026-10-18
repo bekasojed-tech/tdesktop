@@ -9186,11 +9186,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_passcode_strength_advice_variety" = "Make it longer and mix in more kinds of characters.";
 "lng_passcode_strength_advice_fine" = "This passcode is hard to guess.";
 
-"lng_power_schedule_title" = "Power Outage Schedules";
-"lng_power_schedule_about" = "Show only your group's rows in dated power outage schedules from this channel. This setting applies only to this client and account. Other posts stay unchanged. Right-click a filtered post to show its original text.";
+"lng_channel_filters_title" = "Local Channel Filters";
+"lng_channel_filters_about" = "Display rules for this channel and account on this device. Saved changes apply immediately. Channel posts stay unchanged for everyone else.";
+"lng_channel_filters_hide_buttons" = "Hide posts with buttons";
+"lng_channel_filters_hide_buttons_about" = "Hide the entire post, its media and its notifications. Button labels and links do not matter.";
 "lng_power_schedule_enable" = "Filter schedules in this channel";
 "lng_power_schedule_group" = "Group (for example, 12.1)";
-"lng_power_schedule_filtered" = "Local filter: group {group}. Original text is available in the message menu.";
+"lng_power_schedule_format" = "Schedule text template";
+"lng_power_schedule_format_about" = "Fields: %day%, %date%, %group%, %time%. Include %time% and keep the template on one line.";
 "lng_power_schedule_missing" = "Group {group} was not found in this post. Showing the original; this does not mean there are no outages.";
 "lng_power_schedule_unsupported" = "The schedule format could not be recognized safely. Showing the original.";
 

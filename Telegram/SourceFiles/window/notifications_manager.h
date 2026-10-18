@@ -165,6 +165,10 @@ private:
 		crl::time delay = 0;
 		crl::time when = 0;
 	};
+	struct Alert {
+		PeerData *from = nullptr;
+		FullMsgId itemId;
+	};
 	struct SentNotificationId {
 		FullMsgId itemId;
 		uint64 sessionId = 0;
@@ -210,7 +214,7 @@ private:
 
 	base::flat_map<
 		not_null<Data::Thread*>,
-		base::flat_map<crl::time, PeerData*>> _whenAlerts;
+		base::flat_multi_map<crl::time, Alert>> _whenAlerts;
 
 	mutable base::flat_map<
 		SentNotificationId,

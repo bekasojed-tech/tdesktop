@@ -292,6 +292,7 @@ public:
 
 	void itemRemoved(not_null<HistoryItem*> item);
 	void itemVanished(not_null<HistoryItem*> item);
+	void refreshLocalFilters();
 
 	bool hasPendingResizedItems() const;
 	void setHasPendingResizedItems();
