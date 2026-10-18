@@ -142,7 +142,7 @@ bool DragProbe::eventHook(QEvent *e) {
 }
 
 void DragProbe::mousePressEvent(QMouseEvent *e) {
-	_pressed = e->position().toPoint();
+	_pressed = e->pos();
 	record(u"press"_q, e);
 	e->accept();
 }
@@ -150,7 +150,7 @@ void DragProbe::mousePressEvent(QMouseEvent *e) {
 void DragProbe::mouseMoveEvent(QMouseEvent *e) {
 	++_log->moves;
 	record(u"move"_q, e);
-	const auto point = e->position().toPoint();
+	const auto point = e->pos();
 	if (!_crossed
 		&& (e->buttons() & Qt::LeftButton)
 		&& ((point - _pressed).manhattanLength()
@@ -177,15 +177,15 @@ void DragProbe::leaveEventHook(QEvent *e) {
 }
 
 void DragProbe::record(const QString &kind, QMouseEvent *e) {
-	const auto point = e->position().toPoint();
+	const auto point = e->pos();
 	_log->inputs.push_back(
 		u"%1 %2,%3 button=%4 buttons=%5 modifiers=%6"_q.arg(
 			kind,
 			QString::number(point.x()),
 			QString::number(point.y()),
 			QString::number(int(e->button())),
-			QString::number(e->buttons().toInt()),
-			QString::number(e->modifiers().toInt())));
+			QString::number(int(e->buttons())),
+			QString::number(int(e->modifiers()))));
 	_log->order.push_back(kind);
 }
 
