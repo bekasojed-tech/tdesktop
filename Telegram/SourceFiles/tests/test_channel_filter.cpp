@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
 	using namespace HistoryFilter;
 	const auto options = ChannelOptions{
 		.hideButtonPosts = true,
+		.hidePaidPosts = true,
 		.scheduleGroup = u"12.1"_q,
 		.scheduleFormat = u"%date% — %group%: %time%"_q,
 	};
@@ -44,6 +45,15 @@ int main(int argc, char *argv[]) {
 		"requires an explicit schema version");
 	Check(!DeserializeOptions("{\"version\":1,\"hideButtonPosts\":\"false\"}"),
 		"does not treat a string as an enabled flag");
+	Check(!DeserializeOptions("{\"version\":1,\"hidePaidPosts\":1}"),
+		"does not treat a number as the paid posts flag");
+	Check(DeserializeOptions("{\"version\":1,\"hidePaidPosts\":true}")
+			== ChannelOptions{ .hidePaidPosts = true },
+		"reads the paid posts flag on its own");
+	Check(HidesPosts({ .hidePaidPosts = true })
+			&& HidesPosts({ .hideButtonPosts = true })
+			&& !HidesPosts({ .scheduleGroup = u"12.1"_q }),
+		"either hiding rule enables post hiding");
 	Check(!DeserializeOptions("{\"version\":1,\"scheduleGroup\":12.1}"),
 		"does not accept a numeric group");
 	Check(!DeserializeOptions("{\"version\":1,\"scheduleFormat\":false}"),

@@ -9190,6 +9190,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_channel_filters_about" = "Display rules for this channel and account on this device. Saved changes apply immediately. Channel posts stay unchanged for everyone else.";
 "lng_channel_filters_hide_buttons" = "Hide posts with buttons";
 "lng_channel_filters_hide_buttons_about" = "Hide the entire post, its media and its notifications. Button labels and links do not matter.";
+"lng_channel_filters_hide_paid" = "Hide locked paid posts";
+"lng_channel_filters_hide_paid_about" = "Hide posts whose media unlocks for Stars, with their notifications. Posts you have already unlocked stay visible.";
 "lng_power_schedule_enable" = "Filter schedules in this channel";
 "lng_power_schedule_group" = "Group (for example, 12.1)";
 "lng_power_schedule_format" = "Schedule text template";

@@ -10,6 +10,7 @@ namespace HistoryFilter {
 
 struct ChannelOptions {
 	bool hideButtonPosts = false;
+	bool hidePaidPosts = false;
 	QString scheduleGroup;
 	QString scheduleFormat;
 
@@ -18,6 +19,7 @@ struct ChannelOptions {
 		const ChannelOptions &) = default;
 };
 
+[[nodiscard]] bool HidesPosts(const ChannelOptions &options);
 [[nodiscard]] QByteArray SerializeOptions(const ChannelOptions &options);
 [[nodiscard]] std::optional<ChannelOptions> DeserializeOptions(
 	const QByteArray &data);

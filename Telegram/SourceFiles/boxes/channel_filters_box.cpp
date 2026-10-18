@@ -29,6 +29,14 @@ void ChannelFiltersBox(
 		box,
 		tr::lng_channel_filters_hide_buttons_about(),
 		st::boxLabel));
+	const auto hidePaid = box->addRow(object_ptr<Ui::Checkbox>(
+		box,
+		tr::lng_channel_filters_hide_paid(),
+		current.hidePaidPosts));
+	box->addRow(object_ptr<Ui::FlatLabel>(
+		box,
+		tr::lng_channel_filters_hide_paid_about(),
+		st::boxLabel));
 	const auto schedules = box->addRow(object_ptr<Ui::Checkbox>(
 		box,
 		tr::lng_power_schedule_enable(),
@@ -71,6 +79,7 @@ void ChannelFiltersBox(
 		}
 		HistoryFilter::SetOptions(peer, {
 			.hideButtonPosts = hideButtons->checked(),
+			.hidePaidPosts = hidePaid->checked(),
 			.scheduleGroup = schedules->checked() ? selectedGroup : QString(),
 			.scheduleFormat = schedules->checked()
 				? selectedFormat

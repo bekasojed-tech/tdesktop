@@ -260,7 +260,7 @@ void History::itemRemoved(not_null<HistoryItem*> item) {
 void History::checkChatListMessageRemoved(not_null<HistoryItem*> item) {
 	if (chatListMessage() != item
 		&& (lastMessage() != item
-			|| !HistoryFilter::Options(peer).hideButtonPosts)) {
+			|| !HistoryFilter::HidesPosts(HistoryFilter::Options(peer)))) {
 		return;
 	}
 	setChatListMessageUnknown();

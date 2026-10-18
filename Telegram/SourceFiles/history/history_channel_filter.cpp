@@ -7,10 +7,15 @@
 
 namespace HistoryFilter {
 
+bool HidesPosts(const ChannelOptions &options) {
+	return options.hideButtonPosts || options.hidePaidPosts;
+}
+
 QByteArray SerializeOptions(const ChannelOptions &options) {
 	return QJsonDocument(QJsonObject{
 		{ u"version"_q, 1 },
 		{ u"hideButtonPosts"_q, options.hideButtonPosts },
+		{ u"hidePaidPosts"_q, options.hidePaidPosts },
 		{ u"scheduleGroup"_q, options.scheduleGroup },
 		{ u"scheduleFormat"_q, options.scheduleFormat },
 	}).toJson(QJsonDocument::Compact);
@@ -26,10 +31,12 @@ std::optional<ChannelOptions> DeserializeOptions(const QByteArray &data) {
 	}
 	const auto object = document.object();
 	const auto hide = object.value(u"hideButtonPosts"_q);
+	const auto paid = object.value(u"hidePaidPosts"_q);
 	const auto group = object.value(u"scheduleGroup"_q);
 	const auto format = object.value(u"scheduleFormat"_q);
 	if (object.value(u"version"_q) != QJsonValue(1)
 		|| (!hide.isUndefined() && !hide.isBool())
+		|| (!paid.isUndefined() && !paid.isBool())
 		|| (!group.isUndefined() && !group.isString())
 		|| (!format.isUndefined() && !format.isString())
 		|| group.toString().size() > 6
@@ -38,6 +45,7 @@ std::optional<ChannelOptions> DeserializeOptions(const QByteArray &data) {
 	}
 	return ChannelOptions{
 		.hideButtonPosts = hide.toBool(),
+		.hidePaidPosts = paid.toBool(),
 		.scheduleGroup = group.toString(),
 		.scheduleFormat = format.toString(),
 	};

@@ -4,6 +4,7 @@
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "data/data_groups.h"
+#include "data/data_media_types.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
 #include "history/view/history_view_power_schedule_parse.h"
@@ -30,6 +31,19 @@ namespace {
 		}
 	}
 	return false;
+}
+
+[[nodiscard]] bool HasUnpaidMedia(not_null<const HistoryItem*> item) {
+	const auto media = item->media();
+	const auto invoice = media ? media->invoice() : nullptr;
+	return invoice && invoice->isPaidMedia && Data::HasUnpaidMedia(*invoice);
+}
+
+[[nodiscard]] bool Matches(
+		not_null<const HistoryItem*> item,
+		const ChannelOptions &options) {
+	return (options.hideButtonPosts && HasButtons(item))
+		|| (options.hidePaidPosts && HasUnpaidMedia(item));
 }
 
 } // namespace
@@ -91,15 +105,17 @@ void SetOptions(not_null<PeerData*> peer, const ChannelOptions &options) {
 }
 
 bool IsHidden(not_null<const HistoryItem*> item) {
-	if (!item->isPost()
-		|| !Options(item->history()->peer).hideButtonPosts) {
+	if (!item->isPost()) {
 		return false;
 	}
-	if (HasButtons(item)) {
+	const auto options = Options(item->history()->peer);
+	if (!HidesPosts(options)) {
+		return false;
+	} else if (Matches(item, options)) {
 		return true;
 	} else if (const auto group = item->history()->owner().groups().find(item)) {
 		for (const auto &part : group->items) {
-			if (HasButtons(part)) {
+			if (Matches(part, options)) {
 				return true;
 			}
 		}

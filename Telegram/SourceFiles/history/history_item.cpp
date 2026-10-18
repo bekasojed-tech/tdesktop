@@ -270,6 +270,14 @@ void UpdateInstantViewMediaCaption(
 	return peer->canManageWelcomeMessages();
 }
 
+void RefreshFilteredChatListMessage(not_null<History*> history) {
+	const auto preview = history->chatListMessage();
+	const auto last = history->lastMessage();
+	if (const auto invalidated = preview ? preview : last) {
+		history->checkChatListMessageRemoved(invalidated);
+	}
+}
+
 } // namespace
 
 void HistoryItem::HistoryItem::Destroyer::operator()(HistoryItem *value) {
@@ -2568,11 +2576,7 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 
 	finishEdition(keyboardTop);
 	if (wasHidden != HistoryFilter::IsHidden(this)) {
-		const auto preview = _history->chatListMessage();
-		const auto last = _history->lastMessage();
-		if (const auto invalidated = preview ? preview : last) {
-			_history->checkChatListMessageRemoved(invalidated);
-		}
+		RefreshFilteredChatListMessage(_history);
 	}
 }
 
@@ -2711,9 +2715,13 @@ void HistoryItem::applyEdition(const MTPDmessageService &message) {
 void HistoryItem::applyEdition(
 		const QVector<MTPMessageExtendedMedia> &media) {
 	if (const auto existing = this->media()) {
+		const auto wasHidden = HistoryFilter::IsHidden(this);
 		if (existing->updateExtendedMedia(this, media)) {
 			checkBuyButton();
 			finishEdition(-1);
+			if (wasHidden != HistoryFilter::IsHidden(this)) {
+				RefreshFilteredChatListMessage(_history);
+			}
 		}
 	}
 }
