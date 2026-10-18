@@ -73,6 +73,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/emoji_interactions.h"
 #include "core/shortcuts.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "core/core_screenshot_protection.h"
 #include "core/click_handler_types.h"
 #include "core/file_utilities.h"
@@ -2062,7 +2063,15 @@ void SessionController::activateFirstChatsFilter() {
 		return;
 	}
 	_filtersActivated = true;
-	setActiveChatsFilter(session().data().chatsFilters().defaultId());
+	const auto &filters = session().data().chatsFilters();
+	const auto stored = Core::App().settings().readPref<QByteArray>(
+		"active-chats-filter/" + std::to_string(session().userId().bare));
+	auto valid = false;
+	const auto id = stored.toInt(&valid);
+	setActiveChatsFilter(valid
+		&& ranges::contains(filters.list(), id, &Data::ChatFilter::id)
+		? id
+		: filters.defaultId());
 }
 
 bool SessionController::uniqueChatsInSearchResults(
@@ -3323,6 +3332,11 @@ void SessionController::setActiveChatsFilter(
 	const auto changed = (activeChatsFilterCurrent() != id);
 	if (changed) {
 		resetFakeUnreadWhileOpened();
+	}
+	if (_filtersActivated) {
+		Core::App().settings().writePref<QByteArray>(
+			"active-chats-filter/" + std::to_string(session().userId().bare),
+			QByteArray::number(id));
 	}
 	_activeChatsFilter.force_assign(id);
 	if (id || !changed) {
