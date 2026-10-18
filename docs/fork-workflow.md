@@ -33,6 +33,7 @@ git config --local pull.ff only
 git config --local pull.rebase false
 git config --local rerere.enabled true
 git config --local rerere.autoupdate false
+git config --local fetch.recurseSubmodules false
 ```
 
 Если используется GitHub CLI, указываем форк как репозиторий по умолчанию:
@@ -45,6 +46,11 @@ gh repo set-default origin
 продолжает использовать настоящий URL оригинала. Это защита от случайной
 отправки через remote `upstream`, а не серверный запрет: явный URL или изменение
 настроек могут её обойти. Все PR направляем явно в `bekasojed-tech/tdesktop`.
+
+`fetch.recurseSubmodules false` отключает докачку подмодулей при `git fetch`.
+В старой истории оригинала есть ссылка на коммит `tgcalls`, которого больше нет
+на GitHub, и после force push в ветки оригинала fetch может завершаться ошибкой
+`not our ref`. Подмодули обновляются отдельным шагом после merge, см. ниже.
 
 ## Небольшая доработка
 
