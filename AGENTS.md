@@ -2,6 +2,21 @@
 
 This guide defines repository-wide instructions for coding agents working with the Telegram Desktop codebase.
 
+## Fork workflow
+
+This checkout belongs to `bekasojed-tech/tdesktop`. Read
+`docs/fork-workflow.md` for setup and the update procedure.
+
+- Commit our customizations directly to the fork's `dev`. Use a
+  `codex/<change>` branch only when the user asks for one, for example to
+  review a change through a pull request before it reaches `dev`.
+- Publish source changes and pull requests only to `origin`
+  (`bekasojed-tech/tdesktop`), never to `telegramdesktop/tdesktop`.
+- Treat `upstream` as fetch-only. Keep its push URL disabled locally.
+- Integrate `upstream/dev` into our `dev` with merge, preserving our changes
+  and published history. Do not reset our branch to upstream or force push it.
+- Keep changes focused to reduce conflicts during future upstream updates.
+
 ## AI Tasks
 
 In this repository "task" is a specific term. It always means one work record in
