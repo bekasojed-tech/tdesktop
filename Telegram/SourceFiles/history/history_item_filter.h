@@ -7,7 +7,7 @@ class PeerData;
 
 namespace HistoryFilter {
 
-[[nodiscard]] ChannelOptions Options(not_null<PeerData*> peer);
+[[nodiscard]] const ChannelOptions &Options(not_null<PeerData*> peer);
 void SetOptions(not_null<PeerData*> peer, const ChannelOptions &options);
 [[nodiscard]] bool IsHidden(not_null<const HistoryItem*> item);
 

@@ -1,6 +1,5 @@
 #include "history/history_item_filter.h"
 
-#include "base/flat_map.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "data/data_groups.h"
@@ -13,6 +12,8 @@
 #include "history/history_item_components.h"
 #include "main/main_session.h"
 
+#include <map>
+
 namespace HistoryFilter {
 namespace {
 
@@ -20,6 +21,18 @@ namespace {
 	return std::to_string(peer->session().userId().bare)
 		+ "/"
 		+ std::to_string(peer->id.value);
+}
+
+using OptionsCacheKey = std::pair<uint64, uint64>;
+
+[[nodiscard]] OptionsCacheKey CacheKey(not_null<PeerData*> peer) {
+	return { peer->session().userId().bare, peer->id.value };
+}
+
+// std::map keeps references returned by Options() valid on insertion.
+[[nodiscard]] std::map<OptionsCacheKey, ChannelOptions> &Cache() {
+	static auto result = std::map<OptionsCacheKey, ChannelOptions>();
+	return result;
 }
 
 [[nodiscard]] bool HasButtons(not_null<const HistoryItem*> item) {
@@ -48,23 +61,21 @@ namespace {
 
 } // namespace
 
-ChannelOptions Options(not_null<PeerData*> peer) {
+const ChannelOptions &Options(not_null<PeerData*> peer) {
+	static const auto empty = ChannelOptions();
 	if (!peer->isBroadcast()) {
-		return {};
+		return empty;
+	}
+	const auto cacheKey = CacheKey(peer);
+	auto &cache = Cache();
+	if (const auto i = cache.find(cacheKey); i != end(cache)) {
+		return i->second;
 	}
 	const auto suffix = PreferenceSuffix(peer);
 	const auto key = "channel-filters/" + suffix;
 	auto &settings = Core::App().settings();
 	const auto raw = settings.readPref<QByteArray>(key);
-	static auto cache = base::flat_map<
-		std::string,
-		std::pair<QByteArray, ChannelOptions>>();
-	const auto cached = cache.find(key);
-	if (cached != end(cache) && cached->second.first == raw) {
-		return cached->second.second;
-	}
 	auto result = ChannelOptions();
-	auto stored = raw;
 	if (!raw.isEmpty()) {
 		result = DeserializeOptions(raw).value_or(ChannelOptions());
 	} else {
@@ -72,8 +83,10 @@ ChannelOptions Options(not_null<PeerData*> peer) {
 			settings.readPref<QByteArray>("power-schedule/" + suffix));
 		result = MigrateOptions(peer->usernames(), legacyGroup);
 		if (result != ChannelOptions()) {
-			stored = SerializeOptions(result);
-			settings.writePref<QByteArray>(key, stored);
+			settings.writePref<QByteArray>(key, SerializeOptions(result));
+		} else if (!peer->isLoaded()) {
+			// Usernames may still arrive, keep the migration retryable.
+			return empty;
 		}
 	}
 	if (!HistoryView::IsPowerScheduleGroup(result.scheduleGroup)) {
@@ -82,10 +95,7 @@ ChannelOptions Options(not_null<PeerData*> peer) {
 	if (!HistoryView::IsPowerScheduleFormat(result.scheduleFormat)) {
 		result.scheduleFormat.clear();
 	}
-	if (!stored.isEmpty()) {
-		cache[key] = { stored, result };
-	}
-	return result;
+	return cache.emplace(cacheKey, std::move(result)).first->second;
 }
 
 void SetOptions(not_null<PeerData*> peer, const ChannelOptions &options) {
@@ -99,6 +109,7 @@ void SetOptions(not_null<PeerData*> peer, const ChannelOptions &options) {
 	Core::App().settings().writePref<QByteArray>(
 		"channel-filters/" + PreferenceSuffix(peer),
 		SerializeOptions(options));
+	Cache().erase(CacheKey(peer));
 	if (previous != options) {
 		peer->owner().history(peer)->refreshLocalFilters();
 	}
@@ -108,7 +119,7 @@ bool IsHidden(not_null<const HistoryItem*> item) {
 	if (!item->isPost()) {
 		return false;
 	}
-	const auto options = Options(item->history()->peer);
+	const auto &options = Options(item->history()->peer);
 	if (!HidesPosts(options)) {
 		return false;
 	} else if (Matches(item, options)) {

@@ -1781,12 +1781,16 @@ bool WebPage::isDisplayed() const {
 		|| item->Has<HistoryMessageLogEntryOriginal>()) {
 		return false;
 	}
-	return !item->isPost()
-		|| item->richPage()
-		|| ParsePowerSchedule(
-			item->originalText().text,
-			PowerScheduleGroup(item->history()->peer)).status
-				!= PowerScheduleStatus::Filtered;
+	if (!_replacedBySchedule) {
+		// Text or filter changes recreate the view, so parse only once.
+		_replacedBySchedule = item->isPost()
+			&& !item->richPage()
+			&& ParsePowerSchedule(
+				item->originalText().text,
+				PowerScheduleGroup(item->history()->peer)).status
+					== PowerScheduleStatus::Filtered;
+	}
+	return !*_replacedBySchedule;
 }
 
 QString WebPage::additionalInfoString() const {

@@ -218,6 +218,7 @@ private:
 	int _durationWidth = 0;
 
 	mutable QPoint _lastPoint;
+	mutable std::optional<bool> _replacedBySchedule;
 	int _pixw = 0;
 	int _pixh = 0;
 	int _logPreviewDescHeight = 0;
