@@ -17,14 +17,15 @@ if (-not $env:TDESKTOP_REBUILD_DEBUG_RUN) {
 try {
     . (Join-Path $PSScriptRoot 'debug_client.ps1')
     $checkout = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
-    if ($Configuration -ne 'Debug' -or
+    if ($Configuration -cnotin @('Debug', 'Release') -or
         -not (Test-SamePath $BuildDirectory (Join-Path $checkout 'out')) -or
-        -not (Test-SamePath $Executable (Join-Path $checkout 'out\Debug\Telegram.exe'))) {
-        throw 'PRE_LINK rebuild request does not match this checkout Debug build.'
+        -not (Test-SamePath $Executable (Join-Path $checkout "out\$Configuration\Telegram.exe"))) {
+        throw 'PRE_LINK rebuild request does not match this checkout build.'
     }
     $sessionFile = Join-Path $BuildDirectory 'rebuild-debug-session.json'
     $session = [IO.File]::ReadAllText($sessionFile) | ConvertFrom-Json
     if ($session.runId -cne $env:TDESKTOP_REBUILD_DEBUG_RUN -or
+        $session.configuration -cne $Configuration -or
         $session.stopTimeoutSeconds -lt 1 -or $session.stopTimeoutSeconds -gt 120) {
         throw 'PRE_LINK rebuild request is invalid or stale.'
     }

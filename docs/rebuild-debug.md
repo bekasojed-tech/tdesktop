@@ -55,12 +55,29 @@ EXE или PDB. Даже при ошибке сборки данные акка�
 сборке никого не закрывает; вручную выставлять эту переменную не нужно.
 Общая проверка процессов и штатное завершение находятся в `debug_client.ps1`.
 
+## Release
+
+```bat
+.\rebuild-release.cmd
+```
+
+Запускает тот же скрипт с `-Configuration Release`: собирается и перезапускается
+`out\Release\Telegram.exe` с тем же профилем `out\local-profile`, журнал —
+`out/rebuild-release.log`. Требуется, чтобы `out` был настроен с Release
+в `CMAKE_CONFIGURATION_TYPES` и подготовленными Release-зависимостями
+(см. [local-client-launch.md](local-client-launch.md)). Хук `PRE_LINK`
+закрывает только клиент той конфигурации, которая сейчас собирается.
+Если профиль занят клиентом другой конфигурации, скрипт завершается
+с ошибкой до сборки. Разрешение агентам из раздела ниже относится только
+к `rebuild-debug.cmd`.
+
 ## Параметры
 
 ```bat
 .\rebuild-debug.cmd -CheckOnly
 .\rebuild-debug.cmd -Jobs 4
 .\rebuild-debug.cmd -StopTimeoutSeconds 60
+.\rebuild-release.cmd -CheckOnly
 ```
 
 `-CheckOnly` проверяет конфигурацию, пути инструментов и подходящие процессы,

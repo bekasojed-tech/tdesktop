@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+    [ValidateSet('Debug', 'Release')]
+    [string]$Configuration = 'Debug',
     [ValidateRange(1, 64)]
     [int]$Jobs = 6,
     [ValidateRange(1, 120)]
@@ -9,11 +11,13 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+# PRE_LINK compares the name with CMake's $<CONFIG> case-sensitively.
+$Configuration = @('Debug', 'Release') | Where-Object { $_ -ieq $Configuration }
 $checkout = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $buildDirectory = Join-Path $checkout 'out'
-$executable = Join-Path $buildDirectory 'Debug\Telegram.exe'
+$executable = Join-Path $buildDirectory "$Configuration\Telegram.exe"
 $profile = Join-Path $buildDirectory 'local-profile'
-$log = Join-Path $buildDirectory 'rebuild-debug.log'
+$log = Join-Path $buildDirectory ('rebuild-{0}.log' -f $Configuration.ToLowerInvariant())
 $lock = $null
 $exitCode = 1
 
@@ -26,7 +30,7 @@ try {
     }
     $cache = @{}
     foreach ($line in [IO.File]::ReadLines($cacheFile)) {
-        if ($line -match '^(CMAKE_HOME_DIRECTORY|CMAKE_GENERATOR|CMAKE_GENERATOR_INSTANCE|CMAKE_GENERATOR_PLATFORM|CMAKE_GENERATOR_TOOLSET|CMAKE_COMMAND):[^=]+=(.*)$') {
+        if ($line -match '^(CMAKE_HOME_DIRECTORY|CMAKE_GENERATOR|CMAKE_GENERATOR_INSTANCE|CMAKE_GENERATOR_PLATFORM|CMAKE_GENERATOR_TOOLSET|CMAKE_COMMAND|CMAKE_CONFIGURATION_TYPES):[^=]+=(.*)$') {
             $cache[$Matches[1]] = $Matches[2]
         }
     }
@@ -45,6 +49,10 @@ try {
         -not $cache.ContainsKey('CMAKE_GENERATOR_TOOLSET') -or
         $cache['CMAKE_GENERATOR_TOOLSET'] -notmatch '^v143(?:,|$)') {
         throw 'This helper requires the configured x64 v143 build (MSVC 14.44).'
+    }
+    if (-not $cache.ContainsKey('CMAKE_CONFIGURATION_TYPES') -or
+        ($cache['CMAKE_CONFIGURATION_TYPES'] -split ';') -notcontains $Configuration) {
+        throw "out is not configured for $Configuration; see docs/local-client-launch.md."
     }
     $cmake = $cache['CMAKE_COMMAND']
     $vcvars = Join-Path $cache['CMAKE_GENERATOR_INSTANCE'] 'VC\Auxiliary\Build\vcvars64.bat'
@@ -93,18 +101,19 @@ try {
         $runId = [Guid]::NewGuid().ToString('N')
         $session = @{
             runId = $runId
+            configuration = $Configuration
             ownerProcessId = $PID
             stopTimeoutSeconds = $StopTimeoutSeconds
             preLinkCompleted = $false
         }
         [IO.File]::WriteAllText($sessionFile, ($session | ConvertTo-Json))
         $previousRun = $env:TDESKTOP_REBUILD_DEBUG_RUN
-        Write-Host "Building Debug with the client running until PRE_LINK. Log: $log"
+        Write-Host "Building $Configuration with the client running until PRE_LINK. Log: $log"
         try {
             $env:TDESKTOP_REBUILD_DEBUG_RUN = $runId
             $ErrorActionPreference = 'Continue'
             try {
-                & $cmake --build $buildDirectory --config Debug --target Telegram --parallel $Jobs 2>&1 |
+                & $cmake --build $buildDirectory --config $Configuration --target Telegram --parallel $Jobs 2>&1 |
                     ForEach-Object { $_.ToString() } |
                     Tee-Object -FilePath $log
                 $buildExitCode = $LASTEXITCODE
@@ -117,7 +126,7 @@ try {
             Remove-Item -LiteralPath $sessionFile -ErrorAction SilentlyContinue
         }
         if ($buildExitCode -ne 0) {
-            throw "Debug build failed (exit $buildExitCode). No restart attempted. See $log"
+            throw "$Configuration build failed (exit $buildExitCode). No restart attempted. See $log"
         }
         $clients = @(Get-DebugClients $executable $profile)
         if ($clients.Count -gt 0) {

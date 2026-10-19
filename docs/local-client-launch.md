@@ -14,17 +14,18 @@ Debug-сборку по-прежнему запускает `run-debug.cmd`, п�
 
 Зависимости подготовлены без `skip-release`, а в `out` добавлена
 конфигурация Release (`CMAKE_CONFIGURATION_TYPES=Debug;Release`).
-В окружении VS 2026 (см. [local-windows-build.md](local-windows-build.md)),
-предварительно закрыв Release-клиент:
+Пересборка и перезапуск Release-клиента из корня checkout:
 
 ```bat
-cmake --build out --config Release --target Telegram --parallel 10
+.\rebuild-release.cmd
 ```
 
-Сборка с нуля занимает около полутора часов, линковка требует около 40 ГБ
-памяти. `rebuild-debug.cmd` собирает и перезапускает только Debug; если при
-этом работает Release-клиент с тем же профилем, помощник завершится ошибкой
-и ничего не закроет.
+Это тот же помощник, что и `rebuild-debug.cmd`, с `-Configuration Release`;
+см. [rebuild-debug.md](rebuild-debug.md). Сборка с нуля занимает около
+полутора часов, полная линковка требует около 40 ГБ памяти; после небольших
+изменений пересборка заметно быстрее. Помощник одной конфигурации завершится
+ошибкой и ничего не закроет, если профиль занят клиентом другой конфигурации:
+перед переходом между Debug и Release закройте работающий клиент.
 
 Если `prepare` останавливается на `libwebp` с ошибкой
 `Unable to auto-detect toolchain architecture`, он запущен из Git Bash:
