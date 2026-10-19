@@ -104,8 +104,11 @@ EXE готов только после успешного завершения �
 выполнить из обычного cmd.exe или PowerShell:
 
 ```bat
-.\rebuild-debug.cmd
+.\rebuild-release.cmd
 ```
+
+Это ежедневный Release-клиент (см. [local-client-launch.md](local-client-launch.md)).
+Для отладки тот же цикл для Debug выполняет `.\rebuild-debug.cmd`.
 
 Скрипт сам инициализирует окружение Visual Studio. Состояние профиля
 `out\local-profile` сохраняется; установленные клиенты Telegram не закрываются.

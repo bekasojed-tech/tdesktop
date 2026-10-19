@@ -168,6 +168,9 @@ cmake --build "l:\Telegram\tx64\out" --config Debug --target Telegram
 ```
 
 **Never build Release** - it's extremely heavy and not needed for testing changes.
+The one exception is this fork's native Windows checkout, where the user's
+daily client is Release: rebuild it only through `rebuild-release.cmd`, as
+described in "### Build output locks".
 
 **On macOS, never run an Xcode clean against `out/`** - not `--target clean`,
 not `--clean-first` with any target, not `xcodebuild ... clean` and not a
@@ -309,17 +312,26 @@ procedure; report what it printed.
 ### Build output locks
 
 For this fork's native Windows checkout, the user has given standing permission
-to run `rebuild-debug.cmd` when a change needs a build and restart. It initializes
-the configured Visual Studio environment and compiles Debug while the client
-keeps running. Only the helper's opted-in `PRE_LINK` hook gracefully quits this
-checkout's `out/Debug/Telegram.exe` using `out/local-profile`, immediately before
-linking. After the entire build succeeds it launches the rebuilt client with
-the same profile and `-noupdate`. Compilation errors leave the client running.
-MSBuild may run `PRE_LINK` even when sources are unchanged, so a no-change build
-can also restart the client. If the hook never runs, keep the existing client.
-No new confirmation is needed for this helper. Use `rebuild-debug.cmd -CheckOnly`
-for preflight and read `docs/rebuild-debug.md` for its limits and log location.
-This permission does not cover forced termination, installed clients, other
+to run `rebuild-release.cmd` when a change needs a build and restart. The user's
+daily client is `out/Release/Telegram.exe`, so this is the default helper.
+It initializes the configured Visual Studio environment and compiles Release
+while the client keeps running. Only the helper's opted-in `PRE_LINK` hook
+gracefully quits this checkout's `out/Release/Telegram.exe` using
+`out/local-profile`, immediately before linking. After the entire build
+succeeds it launches the rebuilt client with the same profile and `-noupdate`.
+Compilation errors leave the client running. MSBuild may run `PRE_LINK` even
+when sources are unchanged, so a no-change build can also restart the client.
+If the hook never runs, keep the existing client. No new confirmation is needed
+for this helper. Use `rebuild-release.cmd -CheckOnly` for preflight and read
+`docs/rebuild-debug.md` for its limits and log location.
+
+`rebuild-debug.cmd` builds and restarts `out/Debug/Telegram.exe` the same way.
+Use it only when the user asks for a Debug build, for example to debug a crash.
+Debug and Release share `out/local-profile`, so either helper refuses to run
+while the other configuration's client holds the profile. Do not close that
+client to switch configurations; ask the user to close it.
+
+These permissions do not cover forced termination, installed clients, other
 checkouts or profiles, debuggers, or deleting locked outputs. If graceful exit
 or the build fails, report the helper's error and stop; do not widen its scope.
 
@@ -340,6 +352,8 @@ user to close that checkout's Telegram/debugger before rebuilding.
 
 1. **Always use Debug builds** - Release builds are extremely heavy
 2. **Don't build Release configuration** - it's too heavy for testing
+   (except `rebuild-release.cmd` in this fork's native Windows checkout,
+   see "### Build output locks")
 
 ## Debug-Only Code
 
