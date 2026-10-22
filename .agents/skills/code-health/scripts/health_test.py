@@ -3,6 +3,7 @@ import io
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import textwrap
 from types import SimpleNamespace
@@ -455,7 +456,7 @@ class VerifyTests(unittest.TestCase):
 
         def verify():
             return subprocess.run(
-                ['python3', str(script), '--repo', str(repo.root), 'verify', identity],
+                [sys.executable, str(script), '--repo', str(repo.root), 'verify', identity],
                 capture_output=True, text=True)
 
         before = verify()
@@ -467,7 +468,7 @@ class VerifyTests(unittest.TestCase):
         self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
         self.assertIn('resolved', after.stdout)
         typo = subprocess.run(
-            ['python3', str(script), '--repo', str(repo.root), 'verify', 'clone:000000000000'],
+            [sys.executable, str(script), '--repo', str(repo.root), 'verify', 'clone:000000000000'],
             capture_output=True, text=True)
         self.assertEqual(typo.returncode, 2)
         self.assertIn('unknown', typo.stdout)
@@ -559,6 +560,10 @@ class StateTests(unittest.TestCase):
         ledger = json.loads((self.state / 'ledger.json').read_text(encoding='utf-8'))
         self.assertEqual(ledger['commit'], self.commit)
         self.assertTrue((self.state / ledger['run'] / 'report.md').is_file())
+        self.assertTrue((self.state / ledger['run'] / 'harness.md').is_file())
+        harness_data = json.loads((self.state / ledger['run'] / 'harness.json').read_text())
+        self.assertEqual(harness_data['commit'], self.commit)
+        self.assertFalse(harness_data['coverage']['available'])
         self.assertTrue((self.published / '.local' / 'snapshots'
                          / f'{self.commit}.json').is_file())
         _, output = self.run_health(health.command_scan, state=str(self.state))

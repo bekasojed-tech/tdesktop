@@ -1075,10 +1075,6 @@ void History::clearUnreadReactionsFor(
 	}
 }
 
-int History::unreadPollVotesCount() const {
-	return _unreadPollVotesCount;
-}
-
 void History::setUnreadPollVotesCount(int count) {
 	if (_unreadPollVotesCount == count) {
 		return;
@@ -1086,11 +1082,6 @@ void History::setUnreadPollVotesCount(int count) {
 	const auto notifier = unreadStateChangeNotifier(
 		useMyUnreadInParent());
 	_unreadPollVotesCount = count;
-	_unreadPollVotesCountChanges.fire_copy(count);
-}
-
-rpl::producer<int> History::unreadPollVotesCountChanges() const {
-	return _unreadPollVotesCountChanges.events();
 }
 
 void History::clearUnreadPollVotesFor(MsgId topicRootId) {
@@ -1934,6 +1925,16 @@ void History::addOlderSlice(const QVector<MTPMessage> &slice) {
 		_loadedAtTop = true;
 		checkLocalMessages();
 		return;
+	}
+	if (const auto newest = maxMsgId()) {
+		// WHY: a stale latest-page answer can arrive after older messages
+		// were loaded; prepending it would break the order of blocks.
+		const auto older = [&](const MTPMessage &message) {
+			return IdFromMessage(message) <= newest;
+		};
+		if (ranges::none_of(slice, older)) {
+			return;
+		}
 	}
 
 	if (const auto added = createItems(slice); !added.empty()) {
@@ -2788,10 +2789,6 @@ void History::destroyUnreadBar() {
 	if (const auto view = base::take(_unreadBarView)) {
 		view->destroyUnreadBar();
 	}
-}
-
-void History::unsetFirstUnreadMessage() {
-	_firstUnreadView = nullptr;
 }
 
 HistoryView::Element *History::unreadBar() const {
@@ -4343,15 +4340,6 @@ HistoryItem *History::joinedMessageInstance() const {
 void History::removeJoinedMessage() {
 	if (_joinedMessage) {
 		_joinedMessage->destroy();
-	}
-}
-
-void History::removeNewPeerMessages() {
-	if (_newPeerNameChange) {
-		_newPeerNameChange->destroy();
-	}
-	if (_newPeerPhotoChange) {
-		_newPeerPhotoChange->destroy();
 	}
 }
 
