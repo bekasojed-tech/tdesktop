@@ -3,7 +3,9 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Debug',
     [ValidateRange(1, 64)]
-    [int]$Jobs = 6,
+    [int]$Jobs = 2,
+    [ValidateSet('Idle', 'BelowNormal', 'Normal')]
+    [string]$BuildPriority = 'Idle',
     [ValidateRange(1, 120)]
     [int]$StopTimeoutSeconds = 30,
     [switch]$CheckOnly
@@ -70,6 +72,7 @@ try {
     Write-Host "Checkout: $checkout"
     Write-Host "Client: $executable"
     Write-Host "Profile: $profile"
+    Write-Host "Build resources: $Jobs parallel projects, one compiler worker per project, priority $BuildPriority."
     if ($CheckOnly) {
         Write-Host "Preflight OK. Matching clients: $($clients.Count). No stop, build or launch performed."
         $exitCode = 0
@@ -111,14 +114,19 @@ try {
         Write-Host "Building $Configuration with the client running until PRE_LINK. Log: $log"
         try {
             $env:TDESKTOP_REBUILD_DEBUG_RUN = $runId
-            $ErrorActionPreference = 'Continue'
+            $buildProcess = [Diagnostics.Process]::GetCurrentProcess()
+            $previousPriority = $buildProcess.PriorityClass
             try {
-                & $cmake --build $buildDirectory --config $Configuration --target Telegram --parallel $Jobs 2>&1 |
+                $buildProcess.PriorityClass = [Diagnostics.ProcessPriorityClass]$BuildPriority
+                $ErrorActionPreference = 'Continue'
+                & $cmake --build $buildDirectory --config $Configuration --target Telegram --parallel $Jobs -- /p:CL_MPCount=1 /nodeReuse:false 2>&1 |
                     ForEach-Object { $_.ToString() } |
                     Tee-Object -FilePath $log
                 $buildExitCode = $LASTEXITCODE
             } finally {
                 $ErrorActionPreference = 'Stop'
+                $buildProcess.PriorityClass = $previousPriority
+                $buildProcess.Dispose()
             }
             $session = [IO.File]::ReadAllText($sessionFile) | ConvertFrom-Json
         } finally {
