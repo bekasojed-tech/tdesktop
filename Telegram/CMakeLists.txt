@@ -1214,6 +1214,8 @@ PRIVATE
     history/view/history_view_power_schedule.h
     history/view/history_view_power_schedule_parse.cpp
     history/view/history_view_power_schedule_parse.h
+    history/view/history_view_touch_scroll.cpp
+    history/view/history_view_touch_scroll.h
     history/view/history_view_transcribe_button.cpp
     history/view/history_view_transcribe_button.h
     history/view/history_view_translate_bar.cpp
@@ -2122,6 +2124,8 @@ PRIVATE
     test/test_panel.h
     test/test_post_paint.cpp
     test/test_post_paint.h
+    test/test_press_origin.cpp
+    test/test_press_origin.h
     test/test_probe.cpp
     test/test_probe.h
     test/test_publication_identity_scan.cpp
@@ -2138,6 +2142,8 @@ PRIVATE
     test/test_scenario.cpp
     test/test_secrecy_scan.cpp
     test/test_secrecy_scan.h
+    test/test_session_gate.cpp
+    test/test_session_gate.h
     test/test_style.cpp
     test/test_style.h
     test/test_text_drop.cpp
