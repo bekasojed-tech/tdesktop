@@ -38,7 +38,7 @@ function Get-DebugClients([string]$Executable, [string]$Profile) {
 function Stop-DebugClient([string]$Executable, [string]$Profile, [int]$TimeoutSeconds) {
     $clients = @(Get-DebugClients $Executable $Profile)
     if ($clients.Count -gt 0) {
-        Write-Host 'PRE_LINK: requesting graceful shutdown with -quit...'
+        Write-Host 'Requesting graceful shutdown with -quit...'
         $quit = Start-Process -FilePath $Executable -ArgumentList @(
             '-workdir', ('"{0}"' -f $Profile), '-noupdate', '-quit'
         ) -WorkingDirectory (Split-Path $Executable) -WindowStyle Hidden -PassThru
@@ -55,6 +55,6 @@ function Stop-DebugClient([string]$Executable, [string]$Profile, [int]$TimeoutSe
         }
     }
     if (@(Get-DebugClients $Executable $Profile).Count -gt 0) {
-        throw 'A checkout client is still running; refusing to link.'
+        throw 'A checkout client is still running; refusing to replace its files.'
     }
 }

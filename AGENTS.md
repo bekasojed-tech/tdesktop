@@ -314,16 +314,23 @@ procedure; report what it printed.
 For this fork's native Windows checkout, the user has given standing permission
 to run `rebuild-release.cmd` when a change needs a build and restart. The user's
 daily client is `out/Release/Telegram.exe`, so this is the default helper.
-It initializes the configured Visual Studio environment and compiles Release
-while the client keeps running. Only the helper's opted-in `PRE_LINK` hook
-gracefully quits this checkout's `out/Release/Telegram.exe` using
-`out/local-profile`, immediately before linking. After the entire build
-succeeds it launches the rebuilt client with the same profile and `-noupdate`.
-Compilation errors leave the client running. MSBuild may run `PRE_LINK` even
-when sources are unchanged, so a no-change build can also restart the client.
-If the hook never runs, keep the existing client. No new confirmation is needed
-for this helper. Use `rebuild-release.cmd -CheckOnly` for preflight and read
-`docs/rebuild-debug.md` for its limits and log location.
+It initializes the configured Visual Studio environment, then compiles and
+links Release into the staging folder `out/Release-stage` while the client keeps
+running from `out/Release`. Only after the entire build succeeds does it copy
+the changed outputs next to the client, gracefully quit this checkout's
+`out/Release/Telegram.exe` using `out/local-profile`, swap the files in by
+renaming and launch the rebuilt client with the same profile and `-noupdate`.
+Build errors leave the client running and `out/Release` untouched. A build
+that changed no output keeps the existing client. If a file cannot be
+replaced, the helper restores the previous files and starts the previous
+client again. No new confirmation is needed for this helper. Use
+`rebuild-release.cmd -CheckOnly` for preflight and read `docs/rebuild-debug.md`
+for its limits and log location.
+
+The staging folder comes from `Telegram/cmake/fork_options.cmake`, which sets
+the Telegram output folder to `out/<Configuration>$(TdesktopRebuildStage)`.
+The property is empty unless the helper passes it, so a manual
+`cmake --build` still links straight into `out/<Configuration>`.
 
 `rebuild-debug.cmd` builds and restarts `out/Debug/Telegram.exe` the same way.
 Use it only when the user asks for a Debug build, for example to debug a crash.

@@ -7,12 +7,14 @@ target_compile_definitions(Telegram PRIVATE
 )
 
 if (WIN32 AND CMAKE_GENERATOR MATCHES "^Visual Studio ")
-    add_custom_command(TARGET Telegram PRE_LINK
-        COMMAND powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_LIST_DIR}/../build/rebuild_debug_pre_link.ps1"
-            -BuildDirectory "${CMAKE_BINARY_DIR}"
-            -Configuration "$<CONFIG>"
-            -Executable "$<TARGET_FILE:Telegram>"
-        VERBATIM
-    )
+    # rebuild_debug.ps1 passes /p:TdesktopRebuildStage=-stage, so Telegram links
+    # into out/<Config>-stage while the client keeps running from out/<Config>.
+    # MSBuild expands the empty default, which keeps manual builds unchanged.
+    foreach (config ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER ${config} config_upper)
+        set_target_properties(Telegram PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY_${config_upper}
+                "${CMAKE_BINARY_DIR}/${config}$(TdesktopRebuildStage)"
+        )
+    endforeach()
 endif()
