@@ -218,6 +218,17 @@ bool EventFilter::mainWindowEvent(
 		_window->positionUpdated();
 	} return false;
 
+	case WM_WINDOWPOSCHANGING: {
+		// Window managers like PowerToys FancyZones restore the window
+		// placement with a show, even after we hid the window to tray.
+		// Such a window stays cloaked and Qt still treats it as hidden,
+		// so neither the taskbar nor our own activation can reveal it.
+		const auto pos = reinterpret_cast<WINDOWPOS*>(lParam);
+		if ((pos->flags & SWP_SHOWWINDOW) && _window->isHidden()) {
+			pos->flags &= ~SWP_SHOWWINDOW;
+		}
+	} return false;
+
 	case WM_DWMSENDICONICTHUMBNAIL: {
 		if (!Core::App().passcodeLocked()) {
 			return false;
