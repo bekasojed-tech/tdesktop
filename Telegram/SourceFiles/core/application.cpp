@@ -487,7 +487,15 @@ void Application::run() {
 }
 
 void Application::autoRegisterUrlScheme() {
-	if (!OptionSkipUrlSchemeRegister.value()) {
+	const auto workingDir = Launcher::Instance().customWorkingDir()
+		? cWorkingDir()
+		: QString();
+	// A fresh test profile must not take links away from a client in use.
+	if (!OptionSkipUrlSchemeRegister.value()
+		&& !Platform::UrlSchemeTakenElsewhere(
+			u"tg"_q,
+			Platform::ExecutablePathForShortcuts(),
+			workingDir)) {
 		InvokeQueued(this, [] { RegisterUrlScheme(); });
 	}
 }

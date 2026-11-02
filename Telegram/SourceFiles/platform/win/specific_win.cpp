@@ -499,6 +499,75 @@ bool AutostartSkip() {
 #endif // OS_WIN_STORE
 }
 
+bool UrlSchemeTakenElsewhere(
+		const QString &protocol,
+		const QString &executable,
+		const QString &workingDir) {
+	const auto keyName = (u"Software\\Classes\\"_q
+		+ protocol
+		+ u"\\shell\\open\\command"_q).toStdWString();
+	auto key = HKEY();
+	auto result = RegOpenKeyEx(
+		HKEY_CURRENT_USER,
+		keyName.c_str(),
+		0,
+		KEY_READ,
+		&key);
+	if (result != ERROR_SUCCESS) {
+		return false;
+	}
+	auto command = std::array<WCHAR, 4096>{ 0 };
+	auto type = DWORD();
+	auto size = DWORD((command.size() - 1) * sizeof(WCHAR));
+	result = RegQueryValueEx(
+		key,
+		nullptr,
+		nullptr,
+		&type,
+		reinterpret_cast<BYTE*>(command.data()),
+		&size);
+	RegCloseKey(key);
+	if (result != ERROR_SUCCESS || type != REG_SZ) {
+		return false;
+	}
+
+	auto count = 0;
+	const auto list = CommandLineToArgvW(command.data(), &count);
+	if (!list) {
+		return false;
+	}
+	const auto guard = gsl::finally([&] { LocalFree(list); });
+	if (count < 1) {
+		return false;
+	}
+	const auto registeredExecutable = QString::fromWCharArray(list[0]);
+	auto registeredWorkingDir = QString();
+	for (auto i = 1; i + 1 < count; ++i) {
+		const auto argument = QString::fromWCharArray(list[i]);
+		if (argument == u"--"_q) {
+			break;
+		} else if (argument == u"-workdir"_q) {
+			registeredWorkingDir = QString::fromWCharArray(list[i + 1]);
+			break;
+		}
+	}
+	if (!QFileInfo::exists(registeredExecutable)
+		|| (!registeredWorkingDir.isEmpty()
+			&& !QDir(registeredWorkingDir).exists())) {
+		return false;
+	}
+	const auto same = [](const QString &a, const QString &b) {
+		const auto clean = [](const QString &path) {
+			return path.isEmpty()
+				? QString()
+				: QDir::cleanPath(QDir::fromNativeSeparators(path));
+		};
+		return !clean(a).compare(clean(b), Qt::CaseInsensitive);
+	};
+	return !same(registeredExecutable, executable)
+		|| !same(registeredWorkingDir, workingDir);
+}
+
 void WriteCrashDumpDetails() {
 #ifndef TDESKTOP_DISABLE_CRASH_REPORTS
 	PROCESS_MEMORY_COUNTERS data = { 0 };

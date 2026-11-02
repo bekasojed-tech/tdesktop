@@ -68,6 +68,10 @@ void NewVersionLaunched(int oldVersion);
 [[nodiscard]] QString ApplicationIconName();
 [[nodiscard]] bool PreventsQuit(Core::QuitReason reason);
 [[nodiscard]] QString ExecutablePathForShortcuts();
+[[nodiscard]] bool UrlSchemeTakenElsewhere(
+	const QString &protocol,
+	const QString &executable,
+	const QString &workingDir);
 void LaunchMaps(const Data::LocationPoint &point, Fn<void()> fail);
 [[nodiscard]] QString LocalizedCurrencyName(
 	const QString &currency,

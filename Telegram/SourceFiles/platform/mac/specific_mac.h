@@ -50,6 +50,13 @@ inline QString ExecutablePathForShortcuts() {
 	return cExeDir() + cExeName();
 }
 
+inline bool UrlSchemeTakenElsewhere(
+		const QString &protocol,
+		const QString &executable,
+		const QString &workingDir) {
+	return false;
+}
+
 namespace ThirdParty {
 
 inline void start() {

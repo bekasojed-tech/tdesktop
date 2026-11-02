@@ -58,6 +58,13 @@ inline void SetWindowScreenshotProtection(
 		bool enabled) {
 }
 
+inline bool UrlSchemeTakenElsewhere(
+		const QString &protocol,
+		const QString &executable,
+		const QString &workingDir) {
+	return false;
+}
+
 } // namespace Platform
 
 inline void psCheckLocalSocket(const QString &serverName) {
