@@ -368,7 +368,7 @@ HistoryInner::HistoryInner(
 	not_null<Ui::ElasticScroll*> scroll,
 	not_null<Window::SessionController*> controller,
 	not_null<History*> history)
-: RpWidget(nullptr)
+: RpWidget(scroll)
 , _widget(historyWidget)
 , _scroll(scroll)
 , _controller(controller)
@@ -405,6 +405,7 @@ HistoryInner::HistoryInner(
 	[=] { return window()->isActiveWindow(); })
 , _scrollDateCheck([this] { scrollDateCheck(); })
 , _scrollDateHideTimer([this] { scrollDateHideByTimer(); }) {
+	hide();
 	_history->delegateMixin()->setCurrent(this);
 	if (_migrated) {
 		_migrated->delegateMixin()->setCurrent(this);
@@ -1554,7 +1555,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			} else if (item->isUnreadMention()
 				&& !item->isUnreadMedia()) {
 				readContents.insert(item);
-				_widget->enqueueMessageHighlight({ item });
+				if (markingAsViewed) {
+					_widget->enqueueMessageHighlight({ item });
+				}
 			}
 			if (item->hasUnreadPollVote()) {
 				readContents.insert(item);
@@ -3421,7 +3424,12 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					(isUponSelected > 1
 						? tr::lng_context_copy_selected_items(tr::now)
 						: tr::lng_context_copy_selected(tr::now)),
-					[=] { copySelectedText(); },
+					[=] {
+						copySelectedText();
+						if (hasSelectedItems()) {
+							clearSelected();
+						}
+					},
 					&st::menuIconCopy);
 			}
 			if (item && !Ui::SkipTranslate(selectedText.rich)) {
@@ -3583,7 +3591,12 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					((isUponSelected > 1)
 						? tr::lng_context_copy_selected_items(tr::now)
 						: tr::lng_context_copy_selected(tr::now)),
-					[=] { copySelectedText(); },
+					[=] {
+						copySelectedText();
+						if (hasSelectedItems()) {
+							clearSelected();
+						}
+					},
 					&st::menuIconCopy);
 			}
 			if (item && !Ui::SkipTranslate(selectedText.rich)) {
@@ -4014,9 +4027,6 @@ void HistoryInner::copySelectedText(bool withImageText) {
 		.blocks = getSelectedRichBlocks(),
 		.withImageText = withImageText,
 	});
-	if (hasSelectedItems()) {
-		clearSelected();
-	}
 }
 
 void HistoryInner::editCaptionUploadLayer(not_null<HistoryItem*> item) {
@@ -4232,7 +4242,7 @@ void HistoryInner::keyPressEvent(QKeyEvent *e) {
 			const auto elements = accessibleElements();
 			const auto barIndex
 				= accessibilityUnreadBarIndex();
-			if (accessibilityItemAtIndex(
+			if (HistoryView::AccessibilityItemAtIndex(
 					_accessibilityFocusedIndex,
 					elements,
 					barIndex) != _accessibilityFocusedItem) {
@@ -4337,7 +4347,7 @@ void HistoryInner::keyPressEvent(QKeyEvent *e) {
 			const auto elements = accessibleElements();
 			const auto barIndex
 				= accessibilityUnreadBarIndex();
-			const auto item = accessibilityItemAtIndex(
+			const auto item = HistoryView::AccessibilityItemAtIndex(
 				newIndex,
 				elements,
 				barIndex);
@@ -6193,7 +6203,7 @@ void HistoryInner::extendAccessibilitySelection(
 	const auto elements = accessibleElements();
 	const auto barIndex = accessibilityUnreadBarIndex();
 	const auto itemAt = [&](int index) {
-		return accessibilityItemAtIndex(index, elements, barIndex);
+		return HistoryView::AccessibilityItemAtIndex(index, elements, barIndex);
 	};
 	if (oldIndex < 0) {
 		_accessibilitySelectionAnchor = itemAt(newIndex);
@@ -6240,7 +6250,7 @@ void HistoryInner::extendAccessibilitySelection(
 
 void HistoryInner::playPauseFocusedMedia() {
 	const auto elements = accessibleElements();
-	const auto item = accessibilityItemAtIndex(
+	const auto item = HistoryView::AccessibilityItemAtIndex(
 		_accessibilityFocusedIndex,
 		elements,
 		accessibilityUnreadBarIndex());
@@ -6615,24 +6625,6 @@ int HistoryInner::accessibilityUnreadBarIndex() const {
 	return -1;
 }
 
-HistoryItem *HistoryInner::accessibilityItemAtIndex(
-		int index,
-		const std::vector<Element*> &elements,
-		int barIndex) const {
-	// The unread bar row maps to no item: a focused bar is cached as
-	// a null item with a nonnegative index, so it can never be
-	// mistaken for the message it is anchored to when rows shift.
-	if (index < 0 || (barIndex >= 0 && index == barIndex)) {
-		return nullptr;
-	}
-	const auto elementIndex = (barIndex >= 0 && index > barIndex)
-		? (index - 1)
-		: index;
-	return (elementIndex < int(elements.size()))
-		? elements[elementIndex]->data().get()
-		: nullptr;
-}
-
 int HistoryInner::accessibilityChildCount() const {
 	const auto barIndex = accessibilityUnreadBarIndex();
 	return int(accessibleElements().size()) + (barIndex >= 0 ? 1 : 0);
@@ -6900,7 +6892,7 @@ void HistoryInner::announceAccessibilityFocusedChild() {
 		? (barIndex + 1)
 		: (count - 1);
 	const auto elements = accessibleElements();
-	const auto item = accessibilityItemAtIndex(
+	const auto item = HistoryView::AccessibilityItemAtIndex(
 		index,
 		elements,
 		barIndex);
@@ -6984,7 +6976,10 @@ void HistoryInner::applyAccessibilityFocus(
 		bool announceAlways) {
 	const auto elements = accessibleElements();
 	const auto barIndex = accessibilityUnreadBarIndex();
-	const auto item = accessibilityItemAtIndex(index, elements, barIndex);
+	const auto item = HistoryView::AccessibilityItemAtIndex(
+		index,
+		elements,
+		barIndex);
 	const auto changed = (_accessibilityFocusedIndex != index)
 		|| (_accessibilityFocusedItem != item);
 	_accessibilitySelectionAnchor = nullptr;
